@@ -1,0 +1,57 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+brooklyn.catalog:
+  version: "1.0.0-SNAPSHOT" # BROOKLYN_JETTY_RUNNER_VERSION
+  description: |
+    This is an example Jetty Runner application.
+  publish:
+    license_code: Apache-2.0
+  items: 
+  - id: jetty-runner-example-app
+    item: 
+      type: org.apache.brooklyn.entity.software.base.SameServerEntity
+      name: Application Group
+      booklyn.config:
+        defaultDisplayName: Application Group
+      brooklyn.enrichers:
+      - type: org.apache.brooklyn.enricher.stock.Propagator
+        brooklyn.config:
+          producer: $brooklyn:child("jetty-runner")
+          propagating:
+          - $brooklyn:sensor("main.uri")
+      brooklyn.children:
+                             
+      - type: org.apache.brooklyn.entity.database.mysql.MySqlNode
+        id: db
+        brooklyn.config:
+          datastore.creation.script.url: https://github.com/apache/brooklyn-library/raw/master/examples/simple-web-cluster/src/main/resources/visitors-creation-script.sql
+          
+      - type: jetty-runner
+        id: jetty-runner
+        name: Jetty Runner App
+        brooklyn.config:
+          war.url: http://search.maven.org/remotecontent?filepath=org/apache/brooklyn/example/brooklyn-example-hello-world-sql-webapp/0.9.0/brooklyn-example-hello-world-sql-webapp-0.9.0.war
+          additional.java.params: 
+            $brooklyn:formatString:
+              - "-Dbrooklyn.example.db.url=jdbc:%s%s?user=%s&password=%s"
+              - mysql://127.0.0.1:3306/
+              - "visitors"
+              - "brooklyn"
+              - "br00k11n"
+          
