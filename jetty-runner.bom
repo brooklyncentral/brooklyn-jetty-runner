@@ -23,7 +23,7 @@ brooklyn.catalog:
       Jetty is a Java HTTP (Web) server and Java Servlet container
     license_code: Apache-2.0
     defaults:
-      drbdIconUrl: "https://upload.wikimedia.org/wikipedia/en/a/a1/Jetty_logo.png"
+      jettyIconUrl: "https://upload.wikimedia.org/wikipedia/en/a/a1/Jetty_logo.png"
       classpathIconUrl: &jettyIconUrl 'classpath://io.brooklyn.jetty-runner.brooklyn-jetty-runner:jetty.png'
   items:
   - "https://github.com/brooklyncentral/common-catalog-utils/releases/download/v0.1.0/common.bom"
@@ -47,14 +47,13 @@ brooklyn.catalog:
         label: "Jetty Port"
         description: |
           The port for jetty to use
-        type: string
+        type: integer
         default: 8080
       - name: additional.java.params
         label: "Additional Java Parameters"
         description: |
           The port for jetty to use
         type: string
-        default: 8080
       - name: jetty.version
         label: "Jetty Version"
         description: |
