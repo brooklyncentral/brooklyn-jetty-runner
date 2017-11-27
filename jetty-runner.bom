@@ -1,0 +1,141 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+brooklyn.catalog:
+  version: "1.0.0-SNAPSHOT" # BROOKLYN_JETTY_RUNNER_VERSION
+  publish:
+    description: |
+      Jetty is a Java HTTP (Web) server and Java Servlet container
+    license_code: Apache-2.0
+    defaults:
+      jettyIconUrl: "https://upload.wikimedia.org/wikipedia/en/a/a1/Jetty_logo.png"
+      classpathIconUrl: &jettyIconUrl 'classpath://io.brooklyn.jetty-runner.brooklyn-jetty-runner:jetty.png'
+  items:
+  - "https://github.com/brooklyncentral/common-catalog-utils/releases/download/v0.1.0/common.bom"
+  - id: jetty-runner
+    name: "Jetty Runner"
+    description: |
+      Jetty is a Java HTTP (Web) server and Java Servlet container
+    itemType: entity
+    iconUrl: *jettyIconUrl
+    item:
+      id: jetty-runner
+      name: "Jetty Runner"
+      type: centos7-software-process
+      brooklyn.parameters:
+      - name: war.url
+        label: "WAR download URL"
+        description: |
+          The URL of the war to download and run
+        type: string
+      - name: jetty.port
+        label: "Jetty Port"
+        description: |
+          The port for jetty to use
+        type: integer
+        default: 8080
+      - name: additional.java.params
+        label: "Additional Java Parameters"
+        description: |
+          The port for jetty to use
+        type: string
+      - name: jetty.version
+        label: "Jetty Version"
+        description: |
+          The version of jetty to use
+        type: string
+        #default: LATEST
+        default: 8.1.9.v20130131
+      
+      brooklyn.initializers:
+      - type: org.apache.brooklyn.core.effector.ssh.SshCommandEffector      
+        brooklyn.config:
+          name: redeploy
+          description: |
+            Redeploys the application
+          parameters:
+            additional.java.params:
+              description: |
+                Additional Java Parameters
+          command: |
+            if [ -n "${additional.java.params}" ]; then
+              echo ${additional.java.params} > ~/params.txt
+            fi
+            kill `cat ~/jetty-runner.pid`
+            nohup java `cat ~/params.txt` -jar ~/jetty-runner.jar ~/run.war --port ${JETTY_PORT} 2>&1 & echo $! > ~/jetty-runner.pid
+          
+      - type: org.apache.brooklyn.core.sensor.StaticSensor
+        brooklyn.config:
+          name: jetty.port
+          static.value: $brooklyn:config("jetty.port")  
+      
+      brooklyn.enrichers:
+        - type: org.apache.brooklyn.enricher.stock.Transformer
+          brooklyn.config:
+            enricher.triggerSensors:
+              - $brooklyn:sensor("host.address")
+              - $brooklyn:sensor("jetty.port")
+            enricher.targetSensor: $brooklyn:sensor("main.uri")
+            enricher.targetValue: $brooklyn:formatString("http://%s:%s", $brooklyn:attributeWhenReady("host.address"), $brooklyn:attributeWhenReady("jetty.port"))
+        - type: org.apache.brooklyn.enricher.stock.Transformer
+          brooklyn.config:
+            enricher.triggerSensors:
+              - $brooklyn:sensor("host.subnet.address")
+              - $brooklyn:sensor("jetty.port")
+            enricher.targetSensor: $brooklyn:sensor("main.uri.mapped.subnet")
+            enricher.targetValue: $brooklyn:formatString("http://%s:%s", $brooklyn:attributeWhenReady("host.subnet.address"), $brooklyn:attributeWhenReady("jetty.port"))
+        - type: org.apache.brooklyn.enricher.stock.Transformer
+          brooklyn.config:
+            enricher.triggerSensors:
+              - $brooklyn:sensor("host.name")
+              - $brooklyn:sensor("jetty.port")
+            enricher.targetSensor: $brooklyn:sensor("main.uri.mapped.public")
+            enricher.targetValue: $brooklyn:formatString("http://%s:%s", $brooklyn:attributeWhenReady("host.name"), $brooklyn:attributeWhenReady("jetty.port"))
+                
+      brooklyn.config:
+        shell.env:
+          WAR_URL: $brooklyn:config("war.url")
+          JETTY_PORT: $brooklyn:config("jetty.port")
+          JETTY_VERSION: $brooklyn:config("jetty.version")
+          ADDITIONAL_JAVA_PARAMS: $brooklyn:config("additional.java.params")
+        install.command: |
+          sudo yum install -y wget java-1.8.0-openjdk-devel
+          wget -O ~/jetty-runner.jar "http://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=org.mortbay.jetty&a=jetty-runner&v=${JETTY_VERSION}"
+          wget -O ~/run.war "${WAR_URL}"
+          echo ${ADDITIONAL_JAVA_PARAMS} > ~/params.txt
+          
+        launch.command: |
+          # -Dbrooklyn.example.db.url=
+          nohup java `cat ~/params.txt` -jar ~/jetty-runner.jar ~/run.war --port ${JETTY_PORT} 2>&1 & echo $! > ~/jetty-runner.pid
+        stop.command: |
+          kill `cat ~/jetty-runner.pid`
+        checkRunning.command: |
+          kill -0 `cat ~/jetty-runner.pid`
+          
+  - id: jetty-runner-template
+    type: org.apache.brooklyn.entity.stock.BasicApplication
+    version: "1.0.0-SNAPSHOT" # BROOKLYN_JETTY_RUNNER_VERSION
+    name: Jetty Runner
+    description: |
+      Jetty is a Java HTTP (Web) server and Java Servlet container
+    itemType: template
+    iconUrl: *jettyIconUrl
+    license: Apache-2.0
+    item:
+      type: jetty-runner
+      
