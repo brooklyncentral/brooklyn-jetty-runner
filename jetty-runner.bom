@@ -69,12 +69,12 @@ brooklyn.catalog:
           description: |
             Redeploys the application
           parameters:
-            additional.java.params:
+            additionalJavaParams:
               description: |
                 Additional Java Parameters
           command: |
-            if [ -n "${additional.java.params}" ]; then
-              echo ${additional.java.params} > ~/params.txt
+            if [ -n "${additionalJavaParams}" ]; then
+              echo ${additionalJavaParams} > ~/params.txt
             fi
             kill `cat ~/jetty-runner.pid`
             nohup java `cat ~/params.txt` -jar ~/jetty-runner.jar ~/run.war --port ${JETTY_PORT} 2>&1 & echo $! > ~/jetty-runner.pid
