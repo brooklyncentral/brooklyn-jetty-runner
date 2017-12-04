@@ -76,7 +76,7 @@ brooklyn.catalog:
             if [ -n "${additionalJavaParams}" ]; then
               echo ${additionalJavaParams} > ~/params.txt
             fi
-            kill `cat ~/jetty-runner.pid`
+            kill `cat ~/jetty-runner.pid` || true
             nohup java `cat ~/params.txt` -jar ~/jetty-runner.jar ~/run.war --port ${JETTY_PORT} 2>&1 & echo $! > ~/jetty-runner.pid
           
       - type: org.apache.brooklyn.core.sensor.StaticSensor
